@@ -97,7 +97,7 @@ function FileSearcher:onShowFileSearch()
     local dummy = self.search_value
     local enabled_search_home_dir = G_reader_settings:has("home_dir")
     self.search_dialog = InputDialog:new{
-        title = _("Search for books by filename"),
+        title = _("File search"),
         input = self.search_value,
         width = math.floor(Screen:getWidth() * 0.9),
         buttons = {
@@ -162,7 +162,7 @@ function FileSearcher:showSearchResults()
         UIManager:close(menu_container)
     end
     table.sort(self.results, function(v1,v2) return v1.text < v2.text end)
-    self.search_menu:switchItemTable(_("Search Results"), self.results)
+    self.search_menu:switchItemTable(_("Search results"), self.results)
     UIManager:show(menu_container)
 end
 
