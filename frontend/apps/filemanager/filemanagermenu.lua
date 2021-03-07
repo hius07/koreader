@@ -612,7 +612,7 @@ To:
 
     self.menu_items.find_file = {
         -- @translators Search for files by name.
-        text = _("Find a file"),
+        text = _("File search"),
         callback = function()
             self.ui:handleEvent(Event:new("ShowFileSearch"))
         end
