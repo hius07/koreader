@@ -605,17 +605,14 @@ function DocSettings.findSidecarFilesInHashLocation()
     return res
 end
 
-function DocSettings.getSettingsArcFile(doc_settings, does_exist)
+function DocSettings.getSettingsArcFile(md5_checksum, does_exist)
     local folder = G_reader_settings:readSetting("document_metadata_arc_folder")
-    if folder then
-        local md5_checksum = doc_settings:readSetting("partial_md5_checksum")
-        if md5_checksum then
-            local file = folder .. "/" .. md5_checksum .. ".lua"
-            if does_exist then
-                return file and isFile(file) and file
-            end
-            return file
+    if folder and md5_checksum then
+        local file = folder .. "/" .. md5_checksum .. ".lua"
+        if does_exist then
+            return file and isFile(file) and file
         end
+        return file
     end
 end
 
@@ -626,7 +623,7 @@ function DocSettings.saveSettingsArcFile(doc_settings, custom_metadata_file, on_
         end
         custom_metadata_file = DocSettings:findCustomMetadataFile(doc_settings:readSetting("doc_path"))
     end
-    local arc_file = DocSettings.getSettingsArcFile(doc_settings)
+    local arc_file = DocSettings.getSettingsArcFile(doc_settings:readSetting("partial_md5_checksum"))
     if not on_closing then -- on deletion, called by DocSettings.updateLocation()
         if G_reader_settings:hasNot("document_metadata_arc_on_deletion") then
             if arc_file and isFile(arc_file) then
