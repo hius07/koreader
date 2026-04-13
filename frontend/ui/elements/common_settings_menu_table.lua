@@ -9,6 +9,7 @@ local NetworkMgr = require("ui/network/manager")
 local PowerD = Device:getPowerDevice()
 local UIManager = require("ui/uimanager")
 local filemanagerutil = require("apps/filemanager/filemanagerutil")
+local util = require("util")
 local _ = require("gettext")
 local N_ = _.ngettext
 local C_ = _.pgettext
@@ -18,7 +19,6 @@ local T = require("ffi/util").template
 local common_settings = {}
 
 if Device:isCervantes() then
-    local util = require("util")
     if util.pathExists("/usr/bin/restart.sh") then
         common_settings.start_bq = {
             text = T(_("Start %1 reader app"), "BQ"),
