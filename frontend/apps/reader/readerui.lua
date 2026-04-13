@@ -7,6 +7,7 @@ It works using data gathered from a document interface.
 local Archiver = require("ffi/archiver")
 local BD = require("ui/bidi")
 local BookList = require("ui/widget/booklist")
+local ConfirmBox = require("ui/widget/confirmbox")
 local Device = require("device")
 local DeviceListener = require("device/devicelistener")
 local DocCache = require("document/doccache")
@@ -110,6 +111,41 @@ function ReaderUI:registerPostReaderReadyCallback(callback)
 end
 
 function ReaderUI:init()
+    self.doc_settings = DocSettings:open(self.document.file)
+    if self.doc_settings:hasNot("partial_md5_checksum") then
+        self.doc_settings:saveSetting("partial_md5_checksum", util.partialMD5(self.document.file))
+    end
+    if self.doc_settings:has("doc_props") then
+        self:do_init()
+    else -- new book
+        local arc_settings_file = DocSettings.getSettingsArcFile(self.doc_settings, true) -- check if exists
+        if arc_settings_file then
+            UIManager:show(ConfirmBox:new{
+                text = _("The book has been read on this device earlier.\nDo you want to use book metadata from the archive?"),
+                ok_callback = function()
+                    local arc_settings = DocSettings.openSettingsFile(arc_settings_file)
+                    arc_settings.data.metadata_arc = nil
+                    arc_settings.data.doc_path = self.document.file
+                    self.doc_settings.data = arc_settings.data
+                    os.remove(arc_settings_file)
+                    os.remove(arc_settings_file .. ".old")
+                    self:do_init()
+                end,
+                cancel_callback = function()
+                    self.document.is_new = true
+                    os.remove(arc_settings_file)
+                    os.remove(arc_settings_file .. ".old")
+                    self:do_init()
+                end,
+            })
+        else -- no arc settings file
+            self.document.is_new = true
+            self:do_init()
+        end
+    end
+end
+
+function ReaderUI:do_init()
     self.active_widgets = {}
 
     -- cap screen refresh on pan to 2 refreshes per second
@@ -125,8 +161,6 @@ function ReaderUI:init()
         self.dialog = self
     end
 
-    self.doc_settings = DocSettings:open(self.document.file)
-    self.document.is_new = self.doc_settings:readSetting("doc_props") == nil
     -- Handle local settings migration
     SettingsMigration:migrateSettings(self.doc_settings)
 
@@ -471,12 +505,6 @@ function ReaderUI:init()
     -- And have an extended and customized copy in memory for quick access.
     self.doc_props = FileManagerBookInfo.extendProps(props, self.document.file)
 
-    local md5 = self.doc_settings:readSetting("partial_md5_checksum")
-    if md5 == nil then
-        md5 = util.partialMD5(self.document.file)
-        self.doc_settings:saveSetting("partial_md5_checksum", md5)
-    end
-
     local summary = self.doc_settings:readSetting("summary", {})
     if BookList.getBookStatusString(summary.status) == nil then
         summary.status = "reading"
@@ -520,6 +548,7 @@ function ReaderUI:init()
         logger.err("ReaderUI instance mismatch! Opened", tostring(self), "while we still have an existing instance:", tostring(ReaderUI.instance), debug.traceback())
     end
     ReaderUI.instance = self
+    self:show_reader()
 end
 
 function ReaderUI:registerKeyEvents()
@@ -723,29 +752,32 @@ function ReaderUI:doShowReader(file, provider, seamless)
             end
         end
     end
+
+    local function show_reader(reader_instance) -- called at the very end of init()
+        self.reloading = nil
+        self.after_open_callback = nil
+        Screen:setWindowTitle(reader_instance.doc_props.display_title)
+        Device:notifyBookState(reader_instance.doc_props.display_title, document)
+
+        -- This is mostly for the few callers that bypass the coroutine shenanigans and call doShowReader directly,
+        -- instead of showReader...
+        -- Otherwise, showReader will have taken care of that *before* instantiating a new RD,
+        -- in order to ensure a sane ordering of plugins teardown -> instantiation.
+        local FileManager = require("apps/filemanager/filemanager")
+        if FileManager.instance then
+            FileManager.instance:onClose()
+        end
+        UIManager:show(reader_instance, seamless and "ui" or "full")
+    end
+
     local reader = ReaderUI:new{
         dimen = Screen:getSize(),
         covers_fullscreen = true, -- hint for UIManager:_repaint()
         document = document,
         reloading = self.reloading,
         after_open_callback = self.after_open_callback,
+        show_reader = show_reader,
     }
-    self.reloading = nil
-    self.after_open_callback = nil
-
-    Screen:setWindowTitle(reader.doc_props.display_title)
-    Device:notifyBookState(reader.doc_props.display_title, document)
-
-    -- This is mostly for the few callers that bypass the coroutine shenanigans and call doShowReader directly,
-    -- instead of showReader...
-    -- Otherwise, showReader will have taken care of that *before* instantiating a new RD,
-    -- in order to ensure a sane ordering of plugins teardown -> instantiation.
-    local FileManager = require("apps/filemanager/filemanager")
-    if FileManager.instance then
-        FileManager.instance:onClose()
-    end
-
-    UIManager:show(reader, seamless and "ui" or "full")
 end
 
 function ReaderUI:unlockDocumentWithPassword(document, try_again)
@@ -800,6 +832,7 @@ end
 
 function ReaderUI:saveSettings()
     self:handleEvent(Event:new("SaveSettings"))
+    DocSettings.saveSettingsArcFile(self.doc_settings, nil, true)
     self.doc_settings:flush()
     G_reader_settings:flush()
 end
