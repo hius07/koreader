@@ -770,7 +770,7 @@ function ReaderUI:doShowReader(file, provider, seamless)
         UIManager:show(reader_instance, seamless and "ui" or "full")
     end
 
-    local reader = ReaderUI:new{
+    local reader = ReaderUI:new{ -- luacheck: no unused
         dimen = Screen:getSize(),
         covers_fullscreen = true, -- hint for UIManager:_repaint()
         document = document,
