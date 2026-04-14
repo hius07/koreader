@@ -104,11 +104,11 @@ function BookmarkBrowser:showSourceDialog(ui, force_show_dialog)
                 end)
             end,
         },
-        deleted_books = {
-            text = _("Deleted books"),
+        metadata_archive = {
+            text = _("Book metadata archive"),
             enabled = G_reader_settings:has("document_metadata_arc_folder"),
             callback = function()
-                fetch_and_show_bookmarks("deleted_books", function(books)
+                fetch_and_show_bookmarks("metadata_archive", function(books)
                     util.findFiles(G_reader_settings:readSetting("document_metadata_arc_folder"), function(fullpath, filename)
                         if filename:match("%.lua$") then
                             books[fullpath] = true
@@ -218,7 +218,7 @@ function BookmarkBrowser:showSourceDialog(ui, force_show_dialog)
             gen_source_button("history"),
             gen_source_button("collections"),
             gen_source_button("selected_files"),
-            gen_source_button("deleted_books"),
+            gen_source_button("metadata_archive"),
             gen_source_button("home_folder"),
             gen_source_button("home_folder_subfolders"),
             gen_source_button("folder"),
