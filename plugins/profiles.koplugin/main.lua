@@ -22,9 +22,8 @@ local autostart_done
 local Profiles = WidgetContainer:extend{
     name = "profiles",
     prefix = "profile_exec_",
-    profiles_file = DataStorage:getSettingsDir() .. "/profiles.lua",
-    profiles = nil,
-    data = nil,
+    settings_file = DataStorage:getSettingsDir() .. "/profiles.lua",
+    data = nil, -- direct access to the settings table
     updated = false,
 }
 
@@ -37,27 +36,24 @@ function Profiles:init()
 end
 
 function Profiles:loadProfiles()
-    if self.profiles then
-        return
-    end
-    self.profiles = LuaSettings:open(self.profiles_file)
-    self.data = self.profiles.data
-    -- ensure profile name
-    for k, v in pairs(self.data) do
-        if not v.settings then
-            v.settings = {}
+    if not Profiles.settings then
+        Profiles.settings = LuaSettings:open(self.settings_file)
+        -- ensure profile name
+        for k, v in pairs(Profiles.settings.data) do
+            v.settings = v.settings or {}
+            if not v.settings.name then
+                v.settings.name = k
+                self.updated = true
+            end
         end
-        if not v.settings.name then
-            v.settings.name = k
-            self.updated = true
-        end
+        self:onFlushSettings()
     end
-    self:onFlushSettings()
+    self.data = Profiles.settings.data
 end
 
 function Profiles:onFlushSettings()
-    if self.profiles and self.updated then
-        self.profiles:flush()
+    if self.updated then
+        Profiles.settings:flush()
         self.updated = false
     end
 end
@@ -90,7 +86,6 @@ function Profiles:addToMainMenu(menu_items)
 end
 
 function Profiles:getSubMenuItems()
-    self:loadProfiles()
     local sub_item_table = {
         {
             text = _("New"),
