@@ -747,6 +747,16 @@ common_settings.document_metadata_arc = {
             callback = function()
                 G_reader_settings:flipNilOrFalse("document_metadata_arc_on_closing")
             end,
+            separator = true,
+        },
+        {
+            text = _("Archived book list"),
+            enabled_func = function()
+                return G_reader_settings:has("document_metadata_arc_folder")
+            end,
+            callback = function()
+                FileManagerBookInfo:onShowBookMetadataArchive()
+            end,
         },
     },
     separator = true,
