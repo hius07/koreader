@@ -927,6 +927,13 @@ end
 
 -- book metadata (sdr)
 
+function BookInfo:onShowBookMetadataArchive()
+    if G_reader_settings:has("document_metadata_arc_folder") then
+        local BookMetadataArchive = require("ui/widget/bookmetadataarchive")
+        BookMetadataArchive:showBookList(self.ui)
+    end
+end
+
 function BookInfo:moveBookMetadata()
     -- called by filemanagermenu only
     local file_chooser = self.ui.file_chooser
