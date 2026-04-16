@@ -24,20 +24,23 @@ local Profiles = WidgetContainer:extend{
     prefix = "profile_exec_",
     settings_file = DataStorage:getSettingsDir() .. "/profiles.lua",
     data = nil, -- direct access to the settings table
-    updated = false,
+    updated = nil,
 }
 
 function Profiles:init()
     Dispatcher:init()
     self.autoexec = G_reader_settings:readSetting("profiles_autoexec", {})
     self.ui.menu:registerToMainMenu(self)
-    self:onDispatcherRegisterActions()
+    self:onDispatcherRegisterActions() -- will call loadSettings()
     self:onStart()
 end
 
-function Profiles:loadProfiles()
+function Profiles:loadSettings()
     if not Profiles.settings then
         Profiles.settings = LuaSettings:open(self.settings_file)
+        if not next(Profiles.settings.data) then
+            self.updated = true -- first run, force flush
+        end
         -- ensure profile name
         for k, v in pairs(Profiles.settings.data) do
             v.settings = v.settings or {}
@@ -46,7 +49,6 @@ function Profiles:loadProfiles()
                 self.updated = true
             end
         end
-        self:onFlushSettings()
     end
     self.data = Profiles.settings.data
 end
@@ -54,7 +56,7 @@ end
 function Profiles:onFlushSettings()
     if self.updated then
         Profiles.settings:flush()
-        self.updated = false
+        self.updated = nil
     end
 end
 
@@ -68,7 +70,7 @@ local function dispatcherUnregisterProfile(name)
 end
 
 function Profiles:onDispatcherRegisterActions()
-    self:loadProfiles()
+    self:loadSettings()
     for k, v in pairs(self.data) do
         if v.settings.registered then
             dispatcherRegisterProfile(k)
